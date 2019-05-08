@@ -49,47 +49,72 @@ docker network ls
 上面的内容中，已经在当前主机初始化了一个`swarm`集群。现在用`docker-machine`从头开始模拟具有两个节点的swarm集群。
 更多`swarm`介绍请阅读 https://docs.docker.com/engine/swarm/
 
+如果没有翻墙的话，这一步很慢，因为需要从github下载一个iso系统镜像，<br>
+可以更加运行时终端提示，将相关镜像用迅雷下载到相关目录中去。<br>
+创建一个名为 master的虚拟机
+
 ```
-#如果没有翻墙的话，这一步很慢，因为需要从github下载一个iso系统镜像，
-#可以更加运行时终端提示，将相关镜像用迅雷下载到相关目录中去。
-#创建一个名为 master的虚拟机
 docker-machine create -d "virtualbox" master
-#连接到创建完成的虚拟机 master
-docker-machine ssh master
-#1.初始化swarm集群
+```
+
+连接到创建完成的虚拟机 master <br>
+`docker-machine ssh master`<br>
+1.初始化swarm集群<br>
+```
 docker swarm init --advertise-addr eth1
-#2.初始化完成后，master节点就变成了集群的管理节点，管理节点可以查看当前集群节点列表
+```
+2.初始化完成后，master节点就变成了集群的管理节点，管理节点可以查看当前集群节点列表
+```
 docker node ls
-#3.查看节点以非管理节点身份加入集群的命令 
-#【也做作为管理候选节点的身份加入集群， 如果主节点挂了，那么候选节点会自动成功为主节点，进行节点服务管理，】
-#【相关命令为 docker swarm join-token manager】
+```
+3.查看节点以非管理节点身份加入集群的命令 <br>
+【也做作为管理候选节点的身份加入集群， 如果主节点挂了，那么候选节点会自动成功为主节点，进行节点服务管理，<br>
+相关命令为 `docker swarm join-token manager`】
+```
 docker swarm join-token worker
-#复制提示，类似:
-#
-# docker swarm join --token SWMTKN-1-53jepeqm8u868bc2lqob0po1kup1j8993edtqs4ythxtq7pmrh-9cg0o2atvfu8d5ykhhffv06t6 192.168.99.104:2377
-#
-#
-#退出当前虚拟机
+```
+
+复制提示，类似:
+```
+ docker swarm join --token SWMTKN-1-53jepeqm8u868bc2lqob0po1kup1j8993edtqs4ythxtq7pmrh-9cg0o2atvfu8d5ykhhffv06t6 192.168.99.104:2377
+```
+退出当前虚拟机
+```
 exit
-#创建一个名为 node01 的虚拟机
+```
+创建一个名为 node01 的虚拟机
+```
 docker-machine create -d "virtualbox" node01
-#登录虚拟机node01
+```
+登录虚拟机node01
+```
 docker-machine ssh node01
-#4.加入集群，粘贴刚才通过 docker swarm join-token worker 得到的命令
+```
+4.加入集群，粘贴刚才通过`docker swarm join-token worker` 得到的命令
+```
 docker swarm join --token SWMTKN-1-53jepeqm8u868bc2lqob0po1kup1j8993edtqs4ythxtq7pmrh-9cg0o2atvfu8d5ykhhffv06t6 192.168.99.104:2377
-#查看下当前docker网络,发现有默认的ingress和docker_gwbridge网络生成
+```
+查看下当前docker网络,发现有默认的ingress和docker_gwbridge网络生成
+```
 docker network ls
-#退出当前虚拟机
+```
+退出当前虚拟机
+```
 exit
-#重新连接到master
+```
+重新连接到master
+```
 docker-machine ssh master
-#5.查看集群节点数量
+```
+5.查看集群节点数量
+```
 docker node ls
-#查看ingress网络状态，可以看到各个节点的数量
+```
+查看ingress网络状态，可以看到各个节点的数量
+```
 docker network inspect ingress -f "{{.Peers}}"
 ```
-如果有两台物理机，那么执行上面的`1,2,3,4,5`点即可
-
+如果有两台物理机，那么执行上面的`1,2,3,4,5`点即可<br>
 以上介绍了`swarm`集群的默认网络。
 
 上面已经创建了具有两个节点的集群，那么接下来，将部署具体的服务到集群中，测试使用`overlay`网络
@@ -98,11 +123,12 @@ docker network inspect ingress -f "{{.Peers}}"
 
 以 `huyinghuan/helloworld`为例进行网络说明，
 
+在master节点内执行【第一次执行可能有点慢，因为需要在每个节点内下载docker image】
 ```
-#在master节点内执行
-#第一次执行可能有点慢，因为需要在每个节点内下载docker image
 docker service create --mode replicated --replicas 2  --name helloworld -p 8080:8080 --endpoint-mode vip huyinghuan/helloworld:latest
-#重复执行多次，可以看到来自不同的节点的响应，可以看到负载均衡模式
+```
+重复执行多次，可以看到来自不同的节点的响应，可以看到负载均衡模式
+```
 curl -w "\n" localhost:8080
 ```
 
@@ -110,7 +136,9 @@ curl -w "\n" localhost:8080
 
 ```
 docker network create -d overlay helloNet
-#也可以使用其他一些参数指定子网
-docker network create -d overlay --subnet 172.19.0.1/24 --gateway 172.19.0.1 helloNew
-#更新服务
 ```
+#也可以使用其他一些参数指定子网
+```
+docker network create -d overlay --subnet 172.19.0.1/24 --gateway 172.19.0.1 helloNew
+```
+更新服务
