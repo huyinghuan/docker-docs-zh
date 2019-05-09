@@ -258,13 +258,13 @@ docker inspect dk1v4nlggaupyvqpe7j0w9fpk -f {{.NetworksAttachments}}
 重复运行,查看IP情况
 
 ```
-docker run --network=testisolation --rm --network helloNet amouat/network-utils:latest curl -s -w "\n" "http://172.19.1.2:8080"
+docker run --rm --network helloNet amouat/network-utils:latest curl -s -w "\n" "http://172.19.1.2:8080"
 ```
 
 看下dns解析情况
 
 ```
-docker run --network=testisolation --rm --network helloNet amouat/network-utils:latest dig helloworld
+docker run  --rm --network helloNet amouat/network-utils:latest dig helloworld
 ```
 
 可以看到 dns将 `helloworld`总是解析到了VIP `172.19.1.2`上。
@@ -335,7 +335,14 @@ docker inspect uva6r7w8szca -f {{.NetworksAttachments}}
 查看dns解析
 
 ```
-docker run --network=testisolation --rm --network helloNet amouat/network-utils:latest dig helloworld
+docker run --rm --network helloNet amouat/network-utils:latest dig helloworld
 ```
 
-可以得到两个解析地址.
+结果是两个解析地址.
+
+循环ping
+
+```
+docker run  --rm --network helloNet amouat/network-utils:latest ping -c 1 helloworld
+```
+可以看到到解析到不同到地址
