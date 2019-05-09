@@ -269,6 +269,8 @@ docker run  --rm --network helloNet amouat/network-utils:latest dig helloworld
 
 可以看到 dns将 `helloworld`总是解析到了VIP `172.19.1.2`上。
 
+【注意： 也可以使用 tasks.server_name 来解析服务， 如果 dig tasks.hellowolrd】
+
 所以负载均衡流程是
 
 ```
@@ -346,3 +348,33 @@ docker run --rm --network helloNet amouat/network-utils:latest dig helloworld
 docker run  --rm --network helloNet amouat/network-utils:latest ping -c 1 helloworld
 ```
 可以看到到解析到不同到地址
+
+
+## 服务访问
+
+默认情况下，`swarm`服务的发布的端口使用路由网格来实现。当访问`swarm`上任何节点的已发布端口（无论它是否正在运行给定服务）时，您将被透明地重定向到正在运行该服务的节点。使用路由网格时，无法确定是哪个Docker节点处理客户端请求。
+
+比如 swarm中有两个节点，服务A发布时只使用一个节点，并公开端口`8080`,那么访问两个节点的`8080`端口，流量都会定向到运行服务A到节点上去。
+
+验证:
+创建服务：
+```
+docker service create --name helloworld --replicas 1 -p 8080:8080  huyinghuan/helloworld:latest
+```
+
+查看节点网络列表:
+```
+#退出master节点
+exit
+#本机上运行
+docker-machine ls
+```
+得到类似IP`192.168.99.105`和`192.168.99.106`
+
+在本机上分别访问
+
+```
+curl -s -w "\n" http://192.168.99.106:8080
+curl -s -w "\n" http://192.168.99.105:8080
+```
+可以得到相同的结果
