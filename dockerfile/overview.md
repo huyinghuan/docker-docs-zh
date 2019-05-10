@@ -123,4 +123,119 @@ ADD static /var/www/test.com
 
 - 如果`src`是目录，则复制目录的全部内容，包括文件系统元数据,目录本身不是复制，只会复制它的子文件和子文件夹
 
-## 
+- 如果`src`是个归档文件（压缩文件, `tar`），则docker会自动帮解压。
+
+## COPY
+
+copy和add功能的简化版，但是只支持文件拷贝。除非确定要拷贝url,解压文件之类的功能，那么才使用`ADD`,否则推荐`COPY`
+
+```
+COPY [--chown=<user>:<group>] <src>... <dest>
+COPY [--chown=<user>:<group>] ["<src>",... "<dest>"]
+```
+
+`copy`参数要求如下：
+
+- `src`必须是基于`Dockerfile`的相对路径而且必须是子目录，不能是`../`，`dest`必须时绝对路径
+- 如果`src`是目录，则复制目录的全部内容，包括文件系统元数据,目录本身不是复制，只会复制它的子文件和子文件夹
+- 如果直接或由于使用通配符指定了多个`src`资源，则`dest`必须是目录，并且必须以斜杠/结尾。
+- 如果`dest`不以尾部斜杠结束，则将其视为常规文件，`src`的内容将写入`dest`
+- 如果`dest`不存在，则会在其路径中创建所有缺少的目录
+
+
+## ENTRYPOINT
+
+配置容器启动后运行的程序。
+
+```
+ENTRYPOINT ["executable", "param1", "param2"] (exec form, preferred) 推荐使用
+ENTRYPOINT command param1 param2 (shell form)
+```
+
+如果你的容器是作为一个工具使用【启动运行某些操作后直接退出删除，如es6的编译等】那么需要使用 `ENTRYPOINT`.
+
+`docker`运行时，如果指定了容器参数，那么这个参数将加在 `ENTRYPOINT`可配置项后面。
+
+注意：如果想要在运行时覆盖ENTRYPOINT配置的参数，那么可以将需要覆盖的参数写入到`CMD`指令众.
+
+`ENTRYPOINT`和`CMD`同时存在时，`CMD`的配置项加作为参数加在`ENTRYPOINT`配置项后面。
+
+来看例子:
+
+Dockerfile:
+
+```Dockerfile
+FROM huyinghuan/hello-tool:latest
+ENTRYPOINT ["/tool/app"]
+```
+构建
+
+```
+docker build -t t:1 .
+```
+执行
+
+```
+docker run --rm t:1
+```
+可以看到响应为`I'm a tool, I get this args:`，增一个容器参数
+
+```
+docker run --rm t:1 -n "test"
+```
+
+响应输出`I'm a test, I get this args:`
+
+更新`Dockerfile`
+
+```
+FROM huyinghuan/hello-tool:latest
+ENTRYPOINT ["/tool/app", "-n", "t2"],
+```
+构建
+```
+docker build -t t:2 .
+```
+分别运行下面的命令
+```
+docker run --rm t:2
+docker run --rm t:2 -t
+```
+可以看到第二个执行的实际命令是 `/toot/app -n t2 -t`
+
+更新 `Dockerfile`
+
+```
+FROM huyinghuan/hello-tool:latest
+ENTRYPOINT ["/tool/app", "-n", "t3"],
+CMD ["-t"]
+```
+
+构建
+
+```
+docker build -t t:3 .
+```
+
+分别运行下面的命令
+```
+docker run --rm t:3
+docker run --rm t:3 -m "haha convery"
+```
+可以看到 `-t`参数已经被 `-m`参数覆盖了
+
+## CMD
+
+`CMD` 也是给容器设置启动参数的，和 `ENTRYPOINT`不同的是，`CMD`可以在运行时被替换覆盖，而`ENTERYPOINT`不能被覆盖。
+`CMD`可以作为 `ENTRYPOINT`的补充。
+
+在有一个 `Dockerfile`里面，至少包含`CMD`和`ENTRYPOINT`中的一个，如果两个都没有，在镜像构建时会报错。
+
+```
+CMD ["executable","param1","param2"] (exec form, this is the preferred form)
+CMD ["param1","param2"] (as default parameters to ENTRYPOINT)
+CMD command param1 param2 (shell form)
+```
+
+
+## VOLUME
