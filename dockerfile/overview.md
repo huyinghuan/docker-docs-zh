@@ -1,4 +1,5 @@
-# Dockerfile
+Dockerfile
+---------
 
 docker image 的构建文件。 如果需要将一个服务运行在docker里面，那么就要把这个服务打包成`image`， `Dockerfile`就是服务打包一系列到命令集合。
 
@@ -44,23 +45,26 @@ LABEL AUTHOR="HYH" EMAIL="ec.huyinghuan@gmail"
 
 ## RUN
 
-在基础镜像中运行的命令.
+```
+RUN <command> (命令运行在shell中) linux默认是: /bin/sh -c  windows默认是: cmd /S /C 
+RUN ["executable", "param1", "param2"] 
+```
+`RUN` 执行操作后造成的影响(文件修改等)，将会保存在镜像中，影响Dockerfile 接下来的步骤。
+
+比如 创建一个配置
 
 ```
-FROM ubuntu:latest
-LABEL LICENSE="MIT"
-LABEL AUTHOR="HYH" EMAIL="ec.huyinghuan@gmail"
-RUN apt-get update
-RUN ap-get install nginx
 ...
+RUN echo "{\"db\":\"127.0.0.1\"}" > /config.json
+RUN xxx -c config.json
 ```
 
-以及在构建过程中，将先更新ubuntu的仓库信息，然后安装`nginx`软件
+那么xxx 就可以使用`该文件`
 
 
 ## CMD
 
-CMD指令用于运行镜像包含的软件以及任何参数
+CMD指令用于运行镜像包含的软件以及配置参数
 
 ```
 CMD ["nginx", "-s", "start"]
@@ -72,76 +76,16 @@ CMD ["nginx", "-s", "start"]
 `CMD`用来配置容器启动完成后，运行的服务。
 
 
-## EXPOSE
+`CMD` 也可以给容器设置启动参数的，和 `ENTRYPOINT`不同的是，`CMD`可以在运行时被替换覆盖，而`ENTERYPOINT`不能被覆盖。
+`CMD`可以作为 `ENTRYPOINT`的补充。
 
-EXPOSE指令通知Docker容器在运行时侦听指定的网络端口。您可以指定端口是侦听TCP还是UDP，如果未指定协议，则默认为TCP.
-EXPOSE指令实际上不会发布端口。它在构建映像的人和运行容器的人之间起到一种文档的作用，告诉使用的人这个镜像里面的服务运行在哪些端口。
-
-```
-FROM ubuntu:latest
-LABEL LICENSE="MIT"
-LABEL AUTHOR="HYH" EMAIL="ec.huyinghuan@gmail"
-RUN apt-get update
-RUN ap-get install nginx
-EXPOSE 80
-#EXPOSE 80/tcp
-#EXPOSE 80/udp
-```
-
-## ENV
-
-配置镜像的默认环境变量，如果你服务需要环境变量中读取数据那可以通过`ENV`来配置。在 `docker run`时使用 `-e`来增加或者修改。
+在有一个 `Dockerfile`里面，至少包含`CMD`和`ENTRYPOINT`中的一个，如果两个都没有，在镜像构建时会报错。
 
 ```
-ENV <key> <value>
-ENV <key>=<value> ...
+CMD ["executable","param1","param2"] (exec form, this is the preferred form)
+CMD ["param1","param2"] (as default parameters to ENTRYPOINT)
+CMD command param1 param2 (shell form)
 ```
-
-## ADD
-
-向镜像中添加文件
-
-```
-ADD [--chown=<user>:<group>] <src>... <dest>
-ADD [--chown=<user>:<group>] ["<src>",... "<dest>"]
-```
-
-比如需要将静态文件添加到镜像中，作为服务的一部分就可以使用此指令
-
-```
-ADD static /var/www/test.com
-```
-
-`ADD`指令支持文件通配符，具体规则见 https://golang.org/pkg/path/filepath/#Match
-
-### src规则
-- `src`必须是基于`Dockerfile`的相对路径而且必须是子目录，不能是`../`，`dest`必须时绝对路径
-
-- 如果`src`是URL且`dest`不以`/`结尾，则从URL下载文件并将其复制到`dest`。
-
-- 如果`src`是一个URL，`dest`以`/`结尾，然后从URL推断文件名，文件下载到`dest/filename`
-
-- 如果`src`是目录，则复制目录的全部内容，包括文件系统元数据,目录本身不是复制，只会复制它的子文件和子文件夹
-
-- 如果`src`是个归档文件（压缩文件, `tar`），则docker会自动帮解压。
-
-## COPY
-
-copy和add功能的简化版，但是只支持文件拷贝。除非确定要拷贝url,解压文件之类的功能，那么才使用`ADD`,否则推荐`COPY`
-
-```
-COPY [--chown=<user>:<group>] <src>... <dest>
-COPY [--chown=<user>:<group>] ["<src>",... "<dest>"]
-```
-
-`copy`参数要求如下：
-
-- `src`必须是基于`Dockerfile`的相对路径而且必须是子目录，不能是`../`，`dest`必须时绝对路径
-- 如果`src`是目录，则复制目录的全部内容，包括文件系统元数据,目录本身不是复制，只会复制它的子文件和子文件夹
-- 如果直接或由于使用通配符指定了多个`src`资源，则`dest`必须是目录，并且必须以斜杠/结尾。
-- 如果`dest`不以尾部斜杠结束，则将其视为常规文件，`src`的内容将写入`dest`
-- 如果`dest`不存在，则会在其路径中创建所有缺少的目录
-
 
 ## ENTRYPOINT
 
@@ -224,18 +168,111 @@ docker run --rm t:3 -m "haha convery"
 ```
 可以看到 `-t`参数已经被 `-m`参数覆盖了
 
-## CMD
+## EXPOSE
 
-`CMD` 也是给容器设置启动参数的，和 `ENTRYPOINT`不同的是，`CMD`可以在运行时被替换覆盖，而`ENTERYPOINT`不能被覆盖。
-`CMD`可以作为 `ENTRYPOINT`的补充。
-
-在有一个 `Dockerfile`里面，至少包含`CMD`和`ENTRYPOINT`中的一个，如果两个都没有，在镜像构建时会报错。
+EXPOSE指令通知Docker容器在运行时侦听指定的网络端口。您可以指定端口是侦听TCP还是UDP，如果未指定协议，则默认为TCP.
+EXPOSE指令实际上不会发布端口。它在构建映像的人和运行容器的人之间起到一种文档的作用，告诉使用的人这个镜像里面的服务运行在哪些端口。
 
 ```
-CMD ["executable","param1","param2"] (exec form, this is the preferred form)
-CMD ["param1","param2"] (as default parameters to ENTRYPOINT)
-CMD command param1 param2 (shell form)
+FROM ubuntu:latest
+LABEL LICENSE="MIT"
+LABEL AUTHOR="HYH" EMAIL="ec.huyinghuan@gmail"
+RUN apt-get update
+RUN ap-get install nginx
+EXPOSE 80
+#EXPOSE 80/tcp
+#EXPOSE 80/udp
 ```
+
+## ENV
+
+配置镜像的默认环境变量，如果你服务需要环境变量中读取数据那可以通过`ENV`来配置。在 `docker run`时使用 `-e`来增加或者修改。
+
+```
+ENV <key> <value>
+ENV <key>=<value> ...
+```
+
+## ADD
+
+向镜像中添加文件
+
+```
+ADD [--chown=<user>:<group>] <src>... <dest>
+ADD [--chown=<user>:<group>] ["<src>",... "<dest>"]
+```
+
+比如需要将静态文件添加到镜像中，作为服务的一部分就可以使用此指令
+
+```
+ADD static /var/www/test.com
+```
+
+`ADD`指令支持文件通配符，具体规则见 https://golang.org/pkg/path/filepath/#Match
+
+### src规则
+- `src`必须是基于`Dockerfile`的相对路径而且必须是子目录，不能是`../`，`dest`必须时绝对路径
+
+- 如果`src`是URL且`dest`不以`/`结尾，则从URL下载文件并将其复制到`dest`。
+
+- 如果`src`是一个URL，`dest`以`/`结尾，然后从URL推断文件名，文件下载到`dest/filename`
+
+- 如果`src`是目录，则复制目录的全部内容，包括文件系统元数据,目录本身不是复制，只会复制它的子文件和子文件夹
+
+- 如果`src`是个归档文件（压缩文件, `tar`），则docker会自动帮解压。
+
+## COPY
+
+copy和add功能的简化版，但是只支持文件拷贝。除非确定要拷贝url,解压文件之类的功能，那么才使用`ADD`,否则推荐`COPY`
+
+```
+COPY [--chown=<user>:<group>] <src>... <dest>
+COPY [--chown=<user>:<group>] ["<src>",... "<dest>"]
+```
+
+`copy`参数要求如下：
+
+- `src`必须是基于`Dockerfile`的相对路径而且必须是子目录，不能是`../`，`dest`必须时绝对路径
+- 如果`src`是目录，则复制目录的全部内容，包括文件系统元数据,目录本身不是复制，只会复制它的子文件和子文件夹
+- 如果直接或由于使用通配符指定了多个`src`资源，则`dest`必须是目录，并且必须以斜杠/结尾。
+- 如果`dest`不以尾部斜杠结束，则将其视为常规文件，`src`的内容将写入`dest`
+- 如果`dest`不存在，则会在其路径中创建所有缺少的目录
 
 
 ## VOLUME
+
+默认情况下，在容器内发生的写操作会在容器移除后而消除，要想保留容器写记录，那么需要把读写操作放到`VOLUME`指定的目录中,或者在运行时通过指定 `-v`参数，设置挂载。
+
+`VOLUME`配置会在docker的主机中生成一个随机目录，进行写操作的保存。
+
+`VOLUME`的声明必须放在`Dockerfile`所有文件更改操作的后面，否在在`VOLUME`的声明之后的所有文件操作将会被舍弃。
+
+```
+FROM ubuntu:latest
+RUN mkdir /data
+WORKDIR /data
+RUN touch hello  #保存
+VOLUME [ "/data" ]
+RUN touch world #舍弃
+ENTRYPOINT [ "ls", "-al" ]
+```
+
+container运行后，可以通过
+
+```
+docker container inspect CONTAINER_ID -f "{{json .Mounts}}"
+```
+查看`VOLUMN`配置详情
+
+## USER
+
+```
+USER <user>[:<group>] or
+USER <UID>[:<GID>]
+```
+
+设置容器运行时所用的用户组。
+
+
+## WORKDIR
+
