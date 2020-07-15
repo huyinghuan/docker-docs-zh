@@ -40,3 +40,7 @@ iptables -t raw -A PREROUTING -s 追踪指定来源的ip -p tcp -j TRACE
 iptables -R DOCKER-USER 2 -i bond4 -o docker0  -p tcp -m conntrack --ctorigdstport 8081 --ctdir ORIGINAL -j REJECT
 ```
 
+### 4
+
+可参考的调试过程文章： https://blog.csdn.net/liukuan73/article/details/78635655
+
